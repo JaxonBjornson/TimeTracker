@@ -108,7 +108,16 @@
                         <tbody>
                             {% for item in quote.items %}
                             <tr class="border-b border-border-light dark:border-border-dark">
-                                <td class="p-3">{{ item.description }}</td>
+                                <td class="p-3">
+                                    {% if item.display_name %}
+                                    <div class="font-medium">{{ item.display_name }}</div>
+                                    {% if item.description and item.description != item.display_name and item.description != '-' %}<div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ item.description }}</div>{% endif %}
+                                    {% else %}
+                                    {{ item.description }}
+                                    {% endif %}
+                                    {% if item.line_kind == 'expense' and item.category %}<div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ item.category }}</div>{% endif %}
+                                    {% if item.line_kind == 'good' and item.sku %}<div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('SKU') }}: {{ item.sku }}</div>{% endif %}
+                                </td>
                                 <td class="p-3">{{ "%.2f"|format(item.quantity) }} {% if item.unit %}{{ item.unit }}{% endif %}</td>
                                 <td class="p-3">{{ "%.2f"|format(item.unit_price) }} {{ quote.currency_code }}</td>
                                 <td class="p-3 font-medium">{{ "%.2f"|format(item.total_amount) }} {{ quote.currency_code }}</td>

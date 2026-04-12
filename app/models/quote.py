@@ -425,7 +425,14 @@ class QuoteItem(db.Model):
     # Optional fields
     unit = db.Column(db.String(20), nullable=True)  # 'hours', 'days', 'items', etc.
 
-    # Inventory integration
+    # Line classification (issue #585): item | expense | good
+    line_kind = db.Column(db.String(20), nullable=False, default="item")
+    display_name = db.Column(db.String(200), nullable=True)
+    category = db.Column(db.String(50), nullable=True)
+    line_date = db.Column(db.Date, nullable=True)
+    sku = db.Column(db.String(100), nullable=True)
+
+    # Inventory integration (only for line_kind == "item")
     stock_item_id = db.Column(db.Integer, db.ForeignKey("stock_items.id"), nullable=True, index=True)
     warehouse_id = db.Column(db.Integer, db.ForeignKey("warehouses.id"), nullable=True)
     is_stock_item = db.Column(db.Boolean, default=False, nullable=False)
@@ -448,16 +455,47 @@ class QuoteItem(db.Model):
         stock_item_id=None,
         warehouse_id=None,
         position=0,
+        line_kind="item",
+        display_name=None,
+        category=None,
+        line_date=None,
+        sku=None,
     ):
         self.quote_id = quote_id
-        self.description = description.strip()
+        kind = (line_kind or "item").strip() or "item"
+        if kind not in ("item", "expense", "good"):
+            kind = "item"
+        self.line_kind = kind
+
+        dn = display_name.strip() if display_name else None
+        cat = category.strip() if category else None
+        sk = sku.strip() if sku else None
+
+        self.display_name = dn if kind != "item" else None
+        self.category = cat if kind != "item" else None
+        self.line_date = line_date if kind == "expense" else None
+        self.sku = sk if kind == "good" else None
+
+        desc = (description or "").strip()
+        if kind == "item":
+            self.description = desc or "-"
+        else:
+            self.description = desc if desc else (dn or "-")
+
         self.quantity = Decimal(str(quantity))
         self.unit_price = Decimal(str(unit_price))
         self.total_amount = self.quantity * self.unit_price
         self.unit = unit.strip() if unit else None
-        self.stock_item_id = stock_item_id
-        self.warehouse_id = warehouse_id
-        self.is_stock_item = stock_item_id is not None
+
+        if kind != "item":
+            self.stock_item_id = None
+            self.warehouse_id = None
+            self.is_stock_item = False
+        else:
+            self.stock_item_id = stock_item_id
+            self.warehouse_id = warehouse_id
+            self.is_stock_item = stock_item_id is not None
+
         self.position = int(position) if position is not None else 0
 
     def __repr__(self):
@@ -468,6 +506,11 @@ class QuoteItem(db.Model):
         return {
             "id": self.id,
             "quote_id": self.quote_id,
+            "line_kind": self.line_kind,
+            "display_name": self.display_name,
+            "category": self.category,
+            "line_date": self.line_date.isoformat() if self.line_date else None,
+            "sku": self.sku,
             "description": self.description,
             "quantity": float(self.quantity),
             "unit_price": float(self.unit_price),

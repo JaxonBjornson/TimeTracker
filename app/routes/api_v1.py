@@ -1359,7 +1359,6 @@ def create_quote():
     tags:
       - Quotes
     """
-    from datetime import date
     from decimal import Decimal
 
     from app.models import QuoteItem
@@ -1400,13 +1399,34 @@ def create_quote():
     # Add items
     items = data.get("items", [])
     for position, item_data in enumerate(items):
+        kind = (item_data.get("line_kind") or "item").strip() or "item"
+        if kind not in ("item", "expense", "good"):
+            kind = "item"
+        sid = item_data.get("stock_item_id")
+        wid = item_data.get("warehouse_id")
+        try:
+            stock_item_id = int(sid) if sid is not None and str(sid).strip() != "" else None
+        except (TypeError, ValueError):
+            stock_item_id = None
+        try:
+            warehouse_id = int(wid) if wid is not None and str(wid).strip() != "" else None
+        except (TypeError, ValueError):
+            warehouse_id = None
+        line_dt = _parse_date(item_data.get("line_date")) if item_data.get("line_date") else None
         item = QuoteItem(
             quote_id=quote.id,
             description=item_data.get("description", ""),
             quantity=Decimal(str(item_data.get("quantity", 1))),
             unit_price=Decimal(str(item_data.get("unit_price", 0))),
             unit=item_data.get("unit"),
+            stock_item_id=stock_item_id,
+            warehouse_id=warehouse_id,
             position=position,
+            line_kind=kind,
+            display_name=item_data.get("display_name"),
+            category=item_data.get("category"),
+            line_date=line_dt,
+            sku=item_data.get("sku"),
         )
         db.session.add(item)
 
@@ -1470,13 +1490,34 @@ def update_quote(quote_id):
 
         # Add new items
         for position, item_data in enumerate(data["items"]):
+            kind = (item_data.get("line_kind") or "item").strip() or "item"
+            if kind not in ("item", "expense", "good"):
+                kind = "item"
+            sid = item_data.get("stock_item_id")
+            wid = item_data.get("warehouse_id")
+            try:
+                stock_item_id = int(sid) if sid is not None and str(sid).strip() != "" else None
+            except (TypeError, ValueError):
+                stock_item_id = None
+            try:
+                warehouse_id = int(wid) if wid is not None and str(wid).strip() != "" else None
+            except (TypeError, ValueError):
+                warehouse_id = None
+            line_dt = _parse_date(item_data.get("line_date")) if item_data.get("line_date") else None
             item = QuoteItem(
                 quote_id=quote.id,
                 description=item_data.get("description", ""),
                 quantity=Decimal(str(item_data.get("quantity", 1))),
                 unit_price=Decimal(str(item_data.get("unit_price", 0))),
                 unit=item_data.get("unit"),
+                stock_item_id=stock_item_id,
+                warehouse_id=warehouse_id,
                 position=position,
+                line_kind=kind,
+                display_name=item_data.get("display_name"),
+                category=item_data.get("category"),
+                line_date=line_dt,
+                sku=item_data.get("sku"),
             )
             db.session.add(item)
 
