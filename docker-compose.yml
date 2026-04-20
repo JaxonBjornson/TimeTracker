@@ -89,7 +89,6 @@ services:
       - TELE_SALT=${TELE_SALT:-8f4a7b2e9c1d6f3a5e8b4c7d2a9f6e3b1c8d5a7f2e9b4c6d3a8f5e1b7c4d9a2f}
 
     # Expose only internally; nginx publishes ports
-    ports: {}
     volumes:
       - app_data:/data
       - app_logs:/app/logs
